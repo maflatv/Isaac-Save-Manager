@@ -29,9 +29,11 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## Program icon (Moving Box)
+## Game artwork (program icon and button icons)
 
-`src/app.ico` is made from the *Moving Box* item sprite of *The Binding of Isaac: Repentance*.
+`src/app.ico` is made from the *Moving Box* item sprite. The button icons in `src/icons/` are item sprites of
+*The Binding of Isaac: Repentance*: The D6, Skeleton Key, Book of Secrets, Clicker, Moving Box, Diplopia,
+Blue Box, Glowing Hour Glass, Spindown Dice, Dad's Key, The Hourglass and Mom's Box.
 That artwork belongs to Edmund McMillen and Nicalis, Inc. It is **not** covered by this project's
 MIT license and is used here as fan-tool attribution only. This project is not affiliated with or
 endorsed by Edmund McMillen or Nicalis.

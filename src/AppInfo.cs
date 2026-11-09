@@ -37,6 +37,43 @@ namespace IsaacSaveManager
 
         public static void OpenKofi() => Open(KofiUrl);
 
+        /// <summary>
+        /// Sprite de un objeto del juego para un botón (src/icons/&lt;nombre&gt;.png, incrustado). Se recorta el borde
+        /// transparente y se amplía por un factor entero, sin suavizar, para que el pixel art se vea nítido.
+        /// </summary>
+        public static Bitmap Sprite(string name, int scale)
+        {
+            try
+            {
+                using (var s = Assembly.GetExecutingAssembly().GetManifestResourceStream("IsaacSaveManager.icons." + name + ".png"))
+                {
+                    if (s == null) return null;
+                    using (var src = new Bitmap(s))
+                    {
+                        int minX = src.Width, minY = src.Height, maxX = -1, maxY = -1;
+                        for (int y = 0; y < src.Height; y++)
+                            for (int x = 0; x < src.Width; x++)
+                                if (src.GetPixel(x, y).A > 16)
+                                {
+                                    if (x < minX) minX = x; if (x > maxX) maxX = x;
+                                    if (y < minY) minY = y; if (y > maxY) maxY = y;
+                                }
+                        if (maxX < 0) return null;
+                        int w = maxX - minX + 1, h = maxY - minY + 1;
+                        var dst = new Bitmap(w * scale, h * scale);
+                        using (var g = Graphics.FromImage(dst))
+                        {
+                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                            g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.Half;
+                            g.DrawImage(src, new Rectangle(0, 0, dst.Width, dst.Height), minX, minY, w, h, GraphicsUnit.Pixel);
+                        }
+                        return dst;
+                    }
+                }
+            }
+            catch { return null; }
+        }
+
         /// <summary>Fila de enlaces «YouTube · Twitch · …» para las ventanas de ayuda y Acerca de.</summary>
         public static System.Windows.Forms.FlowLayoutPanel SocialLinks()
         {

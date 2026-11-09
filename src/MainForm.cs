@@ -30,7 +30,7 @@ namespace IsaacSaveManager
         readonly Label lblHint = new Label { AutoSize = true, Margin = new Padding(3, 6, 3, 6), ForeColor = SystemColors.GrayText };
         readonly Label lblCloud = new Label { AutoSize = true, Margin = new Padding(3, 0, 3, 6), Font = new Font("Segoe UI", 9F, FontStyle.Bold) };
         readonly Button btnRefresh = Btn(), btnAddFolder = Btn(), btnCloudHelp = Btn(), btnReplace = Btn(), btnCopyTo = Btn(), btnExport = Btn(),
-            btnRestore = Btn(), btnConvertFile = Btn(), btnOpenFolder = Btn(), btnBackups = Btn(), btnBackupAll = Btn();
+            btnRestore = Btn(), btnConvertFile = Btn(), btnOpenFolder = Btn(), btnBackups = Btn(), btnBackupAll = Btn(), btnImport = Btn();
         readonly ListView lv = new ListView
         {
             View = View.Details, FullRowSelect = true, MultiSelect = false, HideSelection = false,
@@ -69,7 +69,26 @@ namespace IsaacSaveManager
             langBox.Controls.AddRange(new Control[] { lblLang, cbLang });
             top.Controls.AddRange(new Control[] { lblLocation, cbLocation, btnRefresh, btnAddFolder, btnCloudHelp, langBox });
             var actions = Flow();
-            actions.Controls.AddRange(new Control[] { btnReplace, btnCopyTo, btnExport, btnRestore, btnConvertFile, btnOpenFolder, btnBackupAll, btnBackups });
+            actions.Controls.AddRange(new Control[] { btnImport, btnReplace, btnCopyTo, btnExport, btnRestore, btnConvertFile, btnOpenFolder, btnBackupAll, btnBackups });
+            // Cada botón lleva el sprite de un objeto del juego relacionado con lo que hace.
+            int scale = Math.Max(1, (int)Math.Round(DeviceDpi / 96f));
+            foreach (var bi in new[]
+            {
+                Tuple.Create(btnRefresh, "refresh"), Tuple.Create(btnAddFolder, "folder"), Tuple.Create(btnCloudHelp, "guide"),
+                Tuple.Create(btnImport, "import"), Tuple.Create(btnReplace, "replace"), Tuple.Create(btnCopyTo, "copy"),
+                Tuple.Create(btnExport, "export"), Tuple.Create(btnRestore, "restore"), Tuple.Create(btnConvertFile, "convert"),
+                Tuple.Create(btnOpenFolder, "open"), Tuple.Create(btnBackupAll, "backupnow"), Tuple.Create(btnBackups, "backups"),
+            })
+            {
+                var img = AppInfo.Sprite(bi.Item2, scale);
+                if (img == null) continue;
+                bi.Item1.Image = img;
+                bi.Item1.ImageAlign = ContentAlignment.MiddleLeft;
+                bi.Item1.TextImageRelation = TextImageRelation.ImageBeforeText;
+            }
+            mGuide.Image = AppInfo.Sprite("guide", 1);
+            tips.AutoPopDelay = 20000;
+            tips.InitialDelay = 400;
 
             var root = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, Padding = new Padding(10) };
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
@@ -135,6 +154,7 @@ namespace IsaacSaveManager
             btnCopyTo.Click += (s, e) => ShowCopyMenu();
             btnExport.Click += (s, e) => ExportSlot();
             btnConvertFile.Click += (s, e) => ConvertLooseFile();
+            btnImport.Click += (s, e) => ImportExternal();
             btnOpenFolder.Click += (s, e) => OpenFolder();
             btnBackups.Click += (s, e) => { Directory.CreateDirectory(BackupDir); Process.Start("explorer.exe", Quote(BackupDir)); };
             btnBackupAll.Click += (s, e) => BackupAll();
@@ -170,6 +190,17 @@ namespace IsaacSaveManager
             btnConvertFile.Text = I18n.T("btn.convertFile");
             btnOpenFolder.Text = I18n.T("btn.openFolder");
             btnBackups.Text = I18n.T("btn.backups");
+            btnImport.Text = I18n.T("btn.import");
+            foreach (var t in new[]
+            {
+                Tuple.Create((Control)btnRefresh, "tip.refresh"), Tuple.Create((Control)btnAddFolder, "tip.addFolder"),
+                Tuple.Create((Control)btnCloudHelp, "tip.cloudHelp"), Tuple.Create((Control)btnImport, "tip.import"),
+                Tuple.Create((Control)btnReplace, "tip.replace"), Tuple.Create((Control)btnCopyTo, "tip.copyTo"),
+                Tuple.Create((Control)btnExport, "tip.export"), Tuple.Create((Control)btnRestore, "tip.restore"),
+                Tuple.Create((Control)btnConvertFile, "tip.convertFile"), Tuple.Create((Control)btnOpenFolder, "tip.openFolder"),
+                Tuple.Create((Control)btnBackupAll, "tip.backupAll"), Tuple.Create((Control)btnBackups, "tip.backups"),
+            })
+                tips.SetToolTip(t.Item1, Wrap(I18n.T(t.Item2), 70));
             btnBackupAll.Text = I18n.T("btn.backupAll");
             fillingLang = true;
             cbLang.BeginUpdate();
@@ -424,16 +455,73 @@ namespace IsaacSaveManager
             }
         }
 
-        void WriteSlot(SlotRow row, SaveFile src, string origin)
+        // Los tooltips de Windows no cortan líneas: se parte el texto en líneas de unos «width» caracteres.
+        static string Wrap(string text, int width)
+        {
+            var sb = new System.Text.StringBuilder();
+            int line = 0;
+            foreach (var word in text.Split(' '))
+            {
+                if (line > 0 && line + 1 + word.Length > width) { sb.Append('\n'); line = 0; }
+                else if (line > 0) { sb.Append(' '); line++; }
+                sb.Append(word);
+                line += word.Length;
+            }
+            return sb.ToString();
+        }
+
+        static string RowContents(SlotRow r) =>
+            r.File != null ? SummaryText(r.File) : r.Exists ? I18n.T("summary.unreadable") : I18n.T("summary.empty");
+
+        // Importar: primero el archivo (de cualquier carpeta) y después la ranura de destino, de cualquier ubicación.
+        void ImportExternal()
+        {
+            using (var dlg = new OpenFileDialog { Title = I18n.T("dlg.openSave"), Filter = I18n.T("filter.dat") })
+            {
+                if (dlg.ShowDialog(this) != DialogResult.OK) return;
+                var src = LoadOrReport(dlg.FileName);
+                if (src == null) return;
+                var targets = new List<ImportForm.SlotTarget>();
+                foreach (SaveLocation loc in cbLocation.Items)
+                    foreach (var v in Versions)
+                        for (int slot = 1; slot <= 3; slot++)
+                            targets.Add(new ImportForm.SlotTarget { Location = loc, Version = v, Slot = slot, Contents = RowContents(ReadRow(loc, v, slot)) });
+                // Por defecto: la ranura seleccionada o, si no hay, la ranura 1 de Repentance+ (el juego actual) en la ubicación actual.
+                var sel = Selected();
+                var pre = new ImportForm.SlotTarget { Location = CurrentLocation, Version = sel?.Version ?? GameVersion.RepentancePlus, Slot = sel?.Slot ?? 1 };
+                using (var f = new ImportForm(src, dlg.FileName, SummaryText(src), targets, pre))
+                {
+                    if (f.ShowDialog(this) != DialogResult.OK || f.Selected == null) return;
+                    var t = f.Selected;
+                    // Mostrar la ubicación de destino y su ranura, para que se vea el resultado.
+                    int li = cbLocation.Items.Cast<SaveLocation>().ToList().FindIndex(l => l.Id == t.Location.Id);
+                    if (li >= 0 && li != cbLocation.SelectedIndex) cbLocation.SelectedIndex = li;
+                    foreach (ListViewItem it in lv.Items)
+                    {
+                        var r = (SlotRow)it.Tag;
+                        if (r.Version == t.Version && r.Slot == t.Slot) { it.Selected = true; it.EnsureVisible(); }
+                    }
+                    WriteSlot(ReadRow(t.Location, t.Version, t.Slot), src, dlg.FileName, true);
+                }
+            }
+        }
+
+        // confirmed: el usuario ya vio la conversión, las pérdidas y el destino (diálogo de importar), así que no se
+        // vuelve a preguntar. Las comprobaciones de seguridad (juego abierto, Steam Cloud, Steam abierto) se hacen siempre.
+        void WriteSlot(SlotRow row, SaveFile src, string origin, bool confirmed = false)
         {
             if (SaveWriter.GameRunning()) { Fail(I18n.T("err.gameRunning")); return; }
             if (!CloudAllowsWriting(row.Location)) { RefreshSlots(); return; }
             if (row.Location.Kind == LocationKind.Steam && SaveWriter.SteamRunning()
                 && Ask(I18n.T("warn.steamRunning"), I18n.T("title.warn"), MessageBoxIcon.Warning) != DialogResult.Yes) return;
-            var data = ConvertWithConfirm(src, row.Version);
-            if (data == null) return;
-            string current = row.File != null ? SummaryText(row.File) : row.Exists ? I18n.T("summary.unreadable") : I18n.T("summary.empty");
-            if (Ask(I18n.T("confirm.replace", SlotLabel(row), current, SummaryText(src), origin), I18n.T("title.confirm"), MessageBoxIcon.Question) != DialogResult.Yes) return;
+            SaveFile data;
+            if (confirmed) { ConversionLoss ignored; data = src.ConvertTo(row.Version, out ignored); }
+            else
+            {
+                data = ConvertWithConfirm(src, row.Version);
+                if (data == null) return;
+                if (Ask(I18n.T("confirm.replace", SlotLabel(row), RowContents(row), SummaryText(src), origin), I18n.T("title.confirm"), MessageBoxIcon.Question) != DialogResult.Yes) return;
+            }
 
             string dir = Path.GetDirectoryName(row.Path);
             bool remindCloud = false;

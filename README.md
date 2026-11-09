@@ -42,13 +42,14 @@ Ayudas que incluye:
    - **Steam Cloud: <cuenta>**: lo que usa el juego si Steam Cloud está activado en sus opciones (lo normal en Steam). Aparece una entrada por cada cuenta de Steam del equipo.
    - **Documentos**: lo que usa el juego si Steam Cloud está desactivado o no hay Steam.
    - **Otra carpeta…**: cualquier carpeta con archivos `rep+persistentgamedataN.dat` / `rep_persistentgamedataN.dat`.
-3. Selecciona la ranura y elige una acción:
-   - **Reemplazar con archivo…** (o doble clic en la ranura): elige un `.dat`. Si es de la otra versión, se convierte solo.
+3. Elige una acción. Cada botón lleva un objeto del juego como icono y explica lo que hace al pasar el ratón por encima.
+   - **Importar guardado externo…**: eliges un `.dat` de cualquier carpeta y después la ranura de destino, de cualquier cuenta. El diálogo dice si lo va a convertir (y de qué versión a cuál) y si se pierde algo. El botón final es **Convertir y reemplazar**.
+   - **Reemplazar con archivo…** (o doble clic en la ranura seleccionada): igual, pero para la ranura ya seleccionada. Si el archivo es de la otra versión, se convierte solo.
    - **Copiar a otra ranura**: por ejemplo, de *Repentance, ranura 1* a *Repentance+, ranura 1* para pasar el progreso a Repentance+.
    - **Exportar…**: guarda una copia. El tipo de archivo del diálogo elige la versión (Repentance+ o Repentance).
    - **Restaurar copia…**: vuelve a poner una copia de seguridad de esa ranura.
    - **Copia de seguridad ahora**: copia de una vez las 6 ranuras de la ubicación elegida, sin modificar nada. No hace falta cerrar el juego ni apagar Steam Cloud.
-   - **Convertir archivo suelto…**: convierte un `.dat` a la otra versión sin tocar el juego.
+   - **Convertir guardado (Repentance ⇄ Repentance+)…**: convierte un archivo de guardado de una versión a la otra y lo guarda como archivo nuevo, sin tocar el juego.
 4. Abre Steam, **vuelve a encender Steam Cloud para Isaac** y luego inicia el juego. Si Steam avisa de un conflicto, elige **la copia de este equipo**.
 
 Antes de escribir, el programa siempre copia el archivo actual a la carpeta `backups` junto al `.exe` (o a `%LOCALAPPDATA%\IsaacSaveManager\backups` si esa carpeta no admite escritura).
@@ -66,7 +67,7 @@ El menú **Ayuda** tiene:
 En la carpeta de Steam de cada cuenta (si la opción Steam Cloud del juego está activada, lo normal) o en `Documentos\My Games\Binding of Isaac Repentance(+)`. El texto gris bajo el desplegable *Ubicación* indica cuál usa el juego.
 
 **¿Cómo pongo en el juego un guardado que descargué?**
-Apaga Steam Cloud y sal de Steam. Selecciona la ranura de destino, pulsa *Reemplazar con archivo…* y elige el `.dat`. Antes de jugar, vuelve a encender Steam Cloud.
+Apaga Steam Cloud y sal de Steam. Pulsa *Importar guardado externo…*, elige el `.dat` y luego la ranura de destino; si hace falta se convierte. Antes de jugar, vuelve a encender Steam Cloud.
 
 **¿Cómo paso mi progreso de Repentance a Repentance+?**
 Selecciona la ranura de Repentance, pulsa *Copiar a otra ranura* y elige una de Repentance+. Se convierte solo y no se pierde nada. Al revés también funciona, pero se pierden los datos exclusivos de Repentance+, y el programa avisa antes.
@@ -128,7 +129,9 @@ Solo se usan los archivos de progreso (`persistentgamedata`). Las partidas en cu
 
 `build.bat` genera `dist\IsaacSaveManager.exe` y `build\SelfTest.exe`. Necesita el compilador C# de Visual Studio o de Build Tools. `SelfTest.exe <carpetas o archivos>` comprueba el núcleo con guardados reales (solo los lee) y prueba la escritura en una carpeta temporal.
 
-El icono es `src\app.ico`, incrustado en el `.exe` y también como recurso para la ventana *Acerca de*. Para cambiarlo por otro sprite, ejecuta `powershell -ExecutionPolicy Bypass -File tools\make-icon.ps1 <sprite.png>` y vuelve a compilar. El script recorta el sprite, lo amplía sin suavizar y genera tamaños de 16 a 256 px.
+Los iconos de los botones son sprites de objetos del juego en `src\icons\` (The D6, Skeleton Key, Book of Secrets, Clicker, Moving Box, Diplopia, Blue Box, Glowing Hour Glass, Spindown Dice, Dad's Key, The Hourglass y Mom's Box). `build.bat` los incrusta en el `.exe`, y el programa los recorta y amplía sin suavizar según el DPI de la pantalla.
+
+El icono del programa es `src\app.ico`, incrustado en el `.exe` y también como recurso para la ventana *Acerca de*. Para cambiarlo por otro sprite, ejecuta `powershell -ExecutionPolicy Bypass -File tools\make-icon.ps1 <sprite.png>` y vuelve a compilar. El script recorta el sprite, lo amplía sin suavizar y genera tamaños de 16 a 256 px.
 
 ## Créditos
 

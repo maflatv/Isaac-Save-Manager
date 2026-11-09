@@ -16,11 +16,16 @@ if not defined CSC (
   exit /b 1
 )
 
+rem Iconos de los botones (sprites del juego) incrustados como IsaacSaveManager.icons.<nombre>.png
+setlocal enabledelayedexpansion
+set "ICONS="
+for %%f in (src\icons\*.png) do set "ICONS=!ICONS! /resource:src\icons\%%~nxf,IsaacSaveManager.icons.%%~nxf"
+
 if not exist dist mkdir dist
 if not exist build mkdir build
 
 "%CSC%" /nologo /target:winexe /optimize+ /platform:anycpu /out:dist\IsaacSaveManager.exe ^
-  /win32manifest:src\app.manifest /win32icon:src\app.ico /resource:src\app.ico,IsaacSaveManager.app.ico /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
+  /win32manifest:src\app.manifest /win32icon:src\app.ico /resource:src\app.ico,IsaacSaveManager.app.ico !ICONS! /r:System.Windows.Forms.dll /r:System.Drawing.dll ^
   src\*.cs || exit /b 1
 
 "%CSC%" /nologo /target:exe /out:build\SelfTest.exe ^
