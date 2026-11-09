@@ -1,0 +1,6 @@
+build/
+dist/
+*.tmp
+# Datos locales del usuario al ejecutar el programa desde la carpeta del proyecto
+backups/
+IsaacSaveManager.ini
