@@ -163,6 +163,14 @@ namespace IsaacSaveManager
 
             ApplyTexts();
             ReloadLocations();
+            // Opción --folder: añadir esa carpeta como ubicación y abrirla directamente.
+            if (Program.StartFolder != null && Directory.Exists(Program.StartFolder))
+            {
+                var loc = Locations.Custom(Program.StartFolder);
+                customLocations.Add(loc);
+                ReloadLocations();
+                cbLocation.SelectedIndex = cbLocation.Items.Cast<SaveLocation>().ToList().FindIndex(l => l.Id == loc.Id);
+            }
             Log(I18n.T("log.start", BackupDir));
         }
 

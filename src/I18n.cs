@@ -94,6 +94,12 @@ namespace IsaacSaveManager
             }
         }
 
+        /// <summary>Idioma solo para esta ejecución (opción --lang): no se guarda en el .ini.</summary>
+        public static void UseForSession(string code)
+        {
+            if (Tables.ContainsKey(code)) Choice = code;
+        }
+
         public static void SetChoice(string choice)
         {
             Choice = choice == System || Tables.ContainsKey(choice) ? choice : System;

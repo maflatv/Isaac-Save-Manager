@@ -13,12 +13,21 @@ namespace IsaacSaveManager
 {
     static class Program
     {
+        /// <summary>Carpeta pasada con --folder: se añade como ubicación y se selecciona al arrancar.</summary>
+        public static string StartFolder;
+
+        // Opciones: --folder "<carpeta con guardados>"  y  --lang es|en|fr|pt|ru (solo para esta sesión).
         [STAThread]
-        static void Main()
+        static void Main(string[] args)
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             I18n.LoadChoice();
+            for (int i = 0; i + 1 < args.Length; i++)
+            {
+                if (args[i] == "--folder") StartFolder = System.IO.Path.GetFullPath(args[++i]);
+                else if (args[i] == "--lang") I18n.UseForSession(args[++i]);
+            }
             Application.Run(new MainForm());
         }
     }
