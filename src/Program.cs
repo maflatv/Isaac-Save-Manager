@@ -6,8 +6,8 @@ using System.Windows.Forms;
 [assembly: AssemblyDescription("Gestiona y convierte guardados de The Binding of Isaac: Repentance / Repentance+")]
 [assembly: AssemblyProduct("Isaac Save Manager")]
 [assembly: AssemblyCopyright("MaflaTV")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.0.1.0")]
+[assembly: AssemblyFileVersion("1.0.1.0")]
 
 namespace IsaacSaveManager
 {

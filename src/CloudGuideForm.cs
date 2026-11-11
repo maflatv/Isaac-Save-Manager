@@ -270,7 +270,8 @@ namespace IsaacSaveManager
                 bool local = i == 0;
                 var card = new Rectangle(win.X + 16 + i * (cw + 16), win.Y + 48, cw, 196);
                 Fill(g, Panel, card, 6);
-                Centered(g, local ? "🖳" : "☁", new Rectangle(card.X, card.Y + 10, card.Width, 40), local ? Txt : Dim, 22F, FontStyle.Regular, "Segoe UI Symbol");
+                // Icono en la esquina derecha: a la izquierda va la etiqueta «Elige este», que en algunos idiomas es larga.
+                Centered(g, local ? "🖳" : "☁", new Rectangle(card.Right - 54, card.Y + 6, 44, 40), local ? Txt : Dim, 22F, FontStyle.Regular, "Segoe UI Symbol");
                 Label(g, I18n.T(local ? "guide.c.local" : "guide.c.cloud"), card.X + 14, card.Y + 56, Txt, 10F, FontStyle.Bold, new SizeF(cw - 28, 40));
                 Label(g, I18n.T(local ? "guide.c.modLocal" : "guide.c.modCloud"), card.X + 14, card.Y + 98, local ? Ok : Dim, 9F, local ? FontStyle.Bold : FontStyle.Regular, new SizeF(cw - 28, 20));
                 var btn = new Rectangle(card.X + 14, card.Bottom - 44, cw - 28, 30);
