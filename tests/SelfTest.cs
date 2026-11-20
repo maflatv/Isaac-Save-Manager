@@ -22,7 +22,7 @@ static class SelfTest
             if (Directory.Exists(a)) files.AddRange(Directory.GetFiles(a, "*persistentgamedata*.dat"));
             else files.Add(a);
 
-        SaveFile anyRep = null, anyPlus = null;
+        SaveFile anyRep = null, anyPlus = null, anyPlus10 = null;
         foreach (var f in files)
         {
             SaveFile s;
@@ -50,8 +50,16 @@ static class SelfTest
                 Console.WriteLine($"    a Rep pierde {loss.Achievements} logros y {loss.Counters} contadores");
                 Check(rep.Version == GameVersion.Repentance, "Rep+->Rep no da Rep");
                 Check(rep.Block(1).Count == SaveFile.RepAchievements && rep.Block(2).Count == SaveFile.RepCounters, "tamaños Rep");
+                Check(rep.Format == SaveFile.Format09 && rep.Block(SaveFile.SpecialSeedsBlock).Count == 80, "Rep+->Rep no da formato 09");
                 var back = SaveFile.Parse(rep.ConvertTo(GameVersion.RepentancePlus, out loss).Raw);
-                Check(back.Raw.Length == s.Raw.Length || s.Block(1).Count != SaveFile.RepPlusAchievements, "Rep+->Rep->Rep+ cambia de tamaño");
+                Check(back.Format == SaveFile.Format09, "Rep->Rep+ no da formato 09");
+                Check(back.Raw.Length == s.Raw.Length || s.Block(1).Count != SaveFile.RepPlusAchievements || s.Format != SaveFile.Format09, "Rep+->Rep->Rep+ cambia de tamaño");
+                if (s.Format == SaveFile.Format10)
+                {
+                    anyPlus10 = anyPlus10 ?? s;
+                    Console.WriteLine("    formato 10: bloque 10 = " + s.Block(SaveFile.SpecialSeedsBlock).Count + ", bloque 12 = " + s.Block(12).Count);
+                    Check(back.Summarize().Achievements >= rep.Summarize().Achievements, "10->Rep->Rep+ pierde logros de Rep");
+                }
             }
         }
 
@@ -62,7 +70,10 @@ static class SelfTest
             Check(Rejects(bad) == "err.checksum", "un byte cambiado debería fallar el checksum");
             Check(Rejects(anyPlus.Raw.Take(anyPlus.Raw.Length - 100).ToArray()) != null, "un archivo cortado debería rechazarse");
             Check(Rejects(new byte[] { 1, 2, 3 }) == "err.notSave", "basura debería ser err.notSave");
+            Check(Rejects(WithFormat(anyPlus.Raw, "11")) == "err.newerVersion", "una cabecera 11R debería ser err.newerVersion");
+            Check(Rejects(WithFormat(anyPlus.Raw, "08")) == "err.oldVersion", "una cabecera 08R debería ser err.oldVersion");
         }
+        if (anyPlus10 == null) Console.WriteLine("AVISO: no se probó ningún guardado de formato 10 (v1.9.7.19)");
 
         if (anyRep != null && anyPlus != null)
         {
@@ -88,6 +99,15 @@ static class SelfTest
 
         Console.WriteLine(failures == 0 ? "TODO OK" : failures + " FALLOS");
         return failures == 0 ? 0 : 1;
+    }
+
+    // Copia con otra cifra de formato en la cabecera y el checksum recalculado.
+    static byte[] WithFormat(byte[] raw, string format)
+    {
+        var d = (byte[])raw.Clone();
+        d[11] = (byte)format[0]; d[12] = (byte)format[1];
+        BitConverter.GetBytes(SaveFile.Checksum(d, 16, d.Length - 20)).CopyTo(d, d.Length - 4);
+        return d;
     }
 
     static string Rejects(byte[] d)

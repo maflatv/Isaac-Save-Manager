@@ -301,7 +301,8 @@ namespace IsaacSaveManager
             if (!row.Exists) return I18n.T("status.missing");
             if (row.Error != null) return row.Error;
             if (row.File.Version != row.Version) return I18n.T("status.wrongVersion", I18n.VersionName(row.File.Version));
-            if (row.Version == GameVersion.RepentancePlus && row.File.Block(SaveFile.AchievementsBlock).Count < SaveFile.RepPlusAchievements)
+            if (row.Version == GameVersion.RepentancePlus &&
+                (row.File.Block(SaveFile.AchievementsBlock).Count < SaveFile.RepPlusAchievements || row.File.Format < SaveFile.NewestFormat))
                 return I18n.T("status.olderPlus");
             return I18n.T("status.ok");
         }

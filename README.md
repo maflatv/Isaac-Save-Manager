@@ -109,13 +109,17 @@ Los archivos no se diferencian solo en el nombre. Tienen el mismo formato, pero 
 - **Repentance → Repentance+**: no se pierde nada. Las entradas nuevas quedan a cero, igual que cuando un parche del juego añade logros.
 - **Repentance+ → Repentance**: se pierden los 4 logros y los contadores exclusivos de Repentance+. El programa avisa antes con el número exacto.
 
+Desde la v1.9.7.19 (noviembre de 2026), Repentance+ guarda con un formato nuevo (`ISAACNGSAVE10R`): una semilla especial más y un bloque 12 al final. El programa lee los dos formatos. Al convertir a Repentance+ escribe el formato anterior, que todas las versiones de Repentance+ leen; la v1.9.7.19 lo actualiza sola al guardar.
+
 Si alguien renombró a mano un `rep_` como `rep+`, la columna *Estado* lo indica («Contiene un guardado de Repentance»). Reemplazar la ranura con ese mismo archivo lo convierte.
 
 Solo se usan los archivos de progreso (`persistentgamedata`). Las partidas en curso (`gamestate`) no se tocan. Los guardados de Rebirth, Afterbirth y Afterbirth+ se rechazan.
 
 ## Formato del archivo (para desarrolladores)
 
-- `0x00` cabecera `ISAACNGSAVE09R  ` · `0x10` u32 opaco · desde `0x14`, bloques 1 a 11 · 4 bytes opacos · checksum.
+- `0x00` cabecera `ISAACNGSAVEnnR  ` · `0x10` u32 opaco · desde `0x14`, los bloques · 4 bytes opacos · checksum.
+  - Formato `09` (Repentance y Repentance+ hasta la v1.9.7.17): bloques 1 a 11.
+  - Formato `10` (Repentance+ desde la v1.9.7.19): bloque 10 con 81 entradas en lugar de 80 y un bloque 12 tras el bestiario (37 entradas de 1 byte; su campo *tamaño* sí da los bytes).
 - Cada bloque tiene una cabecera `(tipo, tamaño, cantidad)` seguida de los datos. El campo *tamaño* no es fiable; se usa *cantidad* × tamaño del elemento:
   - 1 byte por elemento: tipos 1, 4, 5, 6, 7 y 10.
   - 4 bytes por elemento: tipos 2, 3, 8 y 9.

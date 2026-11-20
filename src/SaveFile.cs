@@ -37,27 +37,38 @@ namespace IsaacSaveManager
 
     /// <summary>
     /// Archivo rep_/rep+ persistentgamedataN.dat (progreso permanente).
-    /// Formato: cabecera "ISAACNGSAVE09R  ", u32 opaco en 0x10, bloques 1..11 desde 0x14,
+    /// Formato: cabecera "ISAACNGSAVE" + 2 cifras + "R  ", u32 opaco en 0x10, bloques desde 0x14,
     /// 4 bytes opacos y en los últimos 4 un CRC de [0x10, fin-4).
     /// Cada bloque: (tipo, tamaño, cantidad) + datos. El campo tamaño no es fiable; se usa la cantidad.
     /// Bloque 11 (bestiario): «cantidad» sub-bloques (id, n*4) + n entradas de 8 bytes.
-    /// Repentance y Repentance+ solo difieren en el tamaño del bloque 1 (logros) y del 2 (contadores).
+    /// Formato 09 (Repentance y Repentance+ hasta la v1.9.7.17): bloques 1..11. Repentance y
+    /// Repentance+ solo difieren en el tamaño del bloque 1 (logros) y del 2 (contadores).
+    /// Formato 10 (Repentance+ v1.9.7.19): bloque 10 (semillas especiales) con 81 entradas y un
+    /// bloque 12 nuevo (37 entradas de 1 byte) tras el bestiario. El juego actualiza solo el 09 al 10.
     /// </summary>
     public sealed class SaveFile
     {
-        static readonly byte[] HeaderBytes = Encoding.ASCII.GetBytes("ISAACNGSAVE09R  ");
-        const int HeaderLength = 16, FirstBlock = 0x14, BlockCount = 11, MaxCount = 1 << 20;
-        public const int AchievementsBlock = 1, CountersBlock = 2, BestiaryBlock = 11;
+        const string HeaderPrefix = "ISAACNGSAVE";
+        const int HeaderLength = 16, FirstBlock = 0x14, MaxCount = 1 << 20;
+        // Formatos que se entienden: 09 (bloques 1..11) y 10 (bloques 1..12). Uno mayor es de una
+        // versión del juego posterior a esta app; uno menor, de antes de Repentance.
+        public const int Format09 = 9, Format10 = 10, NewestFormat = Format10;
+        const int Format09Blocks = 11, Format09SpecialSeeds = 80;
+        public const int AchievementsBlock = 1, CountersBlock = 2, SpecialSeedsBlock = 10, BestiaryBlock = 11;
         public const int RepAchievements = 638, RepCounters = 496;
         public const int RepPlusAchievements = 642, RepPlusCounters = 523;
         const int MinAchievements = 600; // Afterbirth+ tiene 404: formato anterior e incompatible.
         const int DeadGodAchievement = 637;
-        // Bytes por elemento de los bloques 1..10 (índice = tipo).
+        // Bytes por elemento de los bloques 1..10 (índice = tipo). Los posteriores al bestiario
+        // (bloque 12 del formato 10) guardan en «tamaño» los bytes: se usa tamaño / cantidad.
         static readonly int[] ElementSize = { 0, 1, 4, 4, 1, 1, 1, 1, 4, 4, 1 };
 
         public byte[] Raw { get; private set; }
         byte[] field10, trailer;
         List<Block> blocks;
+
+        /// <summary>Número de formato de la cabecera (9 = ISAACNGSAVE09R, 10 = ISAACNGSAVE10R).</summary>
+        public int Format { get; private set; }
 
         public GameVersion Version => Block(AchievementsBlock).Count > RepAchievements ? GameVersion.RepentancePlus : GameVersion.Repentance;
         public Block Block(int type) => blocks[type - 1];
@@ -66,17 +77,19 @@ namespace IsaacSaveManager
 
         public static SaveFile Parse(byte[] d)
         {
-            if (d.Length >= 11 && Encoding.ASCII.GetString(d, 0, 11) == "ISAACNGSAVE" && !StartsWith(d, HeaderBytes))
-                throw new SaveFormatException("err.oldVersion");
-            if (d.Length < FirstBlock + 8 || !StartsWith(d, HeaderBytes))
-                throw new SaveFormatException("err.notSave");
+            int format = HeaderFormat(d);
+            if (format < 0) throw new SaveFormatException("err.notSave");
+            if (format < Format09) throw new SaveFormatException("err.oldVersion");
+            if (format > NewestFormat) throw new SaveFormatException("err.newerVersion");
+            if (d.Length < FirstBlock + 8) throw new SaveFormatException("err.notSave");
             int end = d.Length - 4;
             if (BitConverter.ToUInt32(d, end) != Checksum(d, HeaderLength, end - HeaderLength))
                 throw new SaveFormatException("err.checksum");
 
-            var s = new SaveFile { Raw = d, field10 = Slice(d, HeaderLength, 4), blocks = new List<Block>() };
+            var s = new SaveFile { Raw = d, Format = format, field10 = Slice(d, HeaderLength, 4), blocks = new List<Block>() };
+            int blockCount = format == Format09 ? Format09Blocks : Format09Blocks + 1;
             int at = FirstBlock;
-            for (int type = 1; type <= BlockCount; type++)
+            for (int type = 1; type <= blockCount; type++)
             {
                 if (at + 12 > end) throw new SaveFormatException("err.structure");
                 int t = BitConverter.ToInt32(d, at), size = BitConverter.ToInt32(d, at + 4), count = BitConverter.ToInt32(d, at + 8);
@@ -94,7 +107,12 @@ namespace IsaacSaveManager
                     }
                     len = p - (at + 12);
                 }
-                else len = (long)count * ElementSize[type];
+                else if (type < ElementSize.Length) len = (long)count * ElementSize[type];
+                else
+                {
+                    if (count > 0 && (size < 0 || size % count != 0)) throw new SaveFormatException("err.structure");
+                    len = count > 0 ? size : 0;
+                }
                 if (at + 12 + len > end) throw new SaveFormatException("err.structure");
                 if (type == AchievementsBlock && count < MinAchievements) throw new SaveFormatException("err.oldVersion");
                 s.blocks.Add(new Block { Type = t, SizeField = size, Count = count, Data = Slice(d, at + 12, (int)len) });
@@ -108,7 +126,8 @@ namespace IsaacSaveManager
         public byte[] Build()
         {
             var ms = new MemoryStream();
-            ms.Write(HeaderBytes, 0, HeaderBytes.Length);
+            var header = Encoding.ASCII.GetBytes(HeaderPrefix + Format.ToString("00") + "R  ");
+            ms.Write(header, 0, header.Length);
             ms.Write(field10, 0, 4);
             foreach (var b in blocks)
             {
@@ -121,7 +140,12 @@ namespace IsaacSaveManager
             return ms.ToArray();
         }
 
-        /// <summary>Devuelve el mismo guardado con el formato de la otra versión. No modifica esta instancia.</summary>
+        /// <summary>
+        /// Devuelve el mismo guardado con el formato de la otra versión. No modifica esta instancia.
+        /// A Repentance+ se escribe en formato 09, que leen todas las versiones de Repentance+
+        /// (la v1.9.7.19 lo pasa sola al 10). A Repentance, un formato 10 pierde además la
+        /// semilla especial 81 y el bloque 12, que esa versión no tiene.
+        /// </summary>
         public SaveFile ConvertTo(GameVersion target, out ConversionLoss loss)
         {
             loss = new ConversionLoss();
@@ -139,10 +163,12 @@ namespace IsaacSaveManager
             {
                 field10 = (byte[])field10.Clone(),
                 trailer = (byte[])trailer.Clone(),
-                blocks = blocks.Select(b => b.Clone()).ToList(),
+                blocks = blocks.Take(Format09Blocks).Select(b => b.Clone()).ToList(),
+                Format = Format09,
             };
             Resize(copy.Block(AchievementsBlock), achievements);
             Resize(copy.Block(CountersBlock), counters);
+            if (copy.Block(SpecialSeedsBlock).Count > Format09SpecialSeeds) Resize(copy.Block(SpecialSeedsBlock), Format09SpecialSeeds);
             copy.Raw = copy.Build();
             return copy;
         }
@@ -172,11 +198,13 @@ namespace IsaacSaveManager
             b.SizeField = count * ratio;
         }
 
-        static bool StartsWith(byte[] d, byte[] prefix)
+        // Número de formato de "ISAACNGSAVEnnR  ", o -1 si no es un guardado de Isaac.
+        static int HeaderFormat(byte[] d)
         {
-            if (d.Length < prefix.Length) return false;
-            for (int i = 0; i < prefix.Length; i++) if (d[i] != prefix[i]) return false;
-            return true;
+            if (d.Length < HeaderLength || Encoding.ASCII.GetString(d, 0, HeaderPrefix.Length) != HeaderPrefix) return -1;
+            char a = (char)d[11], b = (char)d[12];
+            if (a < '0' || a > '9' || b < '0' || b > '9') return -1;
+            return (a - '0') * 10 + (b - '0');
         }
 
         static byte[] Slice(byte[] d, int start, int len)

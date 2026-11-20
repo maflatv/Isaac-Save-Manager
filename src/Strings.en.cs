@@ -56,6 +56,7 @@ namespace IsaacSaveManager
 
             ["err.notSave"] = "The file is not an Isaac progress save (persistentgamedata).",
             ["err.oldVersion"] = "This save is from a version before Repentance (Rebirth, Afterbirth or Afterbirth+). It cannot be used or converted.",
+            ["err.newerVersion"] = "This save is from a newer version of the game than this app supports. Update Isaac Save Manager to use it.",
             ["err.checksum"] = "The checksum does not match: the file is damaged or was hand-edited. The game would discard it.",
             ["err.structure"] = "The file structure is not the expected one (a different game version?).",
             ["err.gameRunning"] = "The game is running. Close it before changing saves: it would overwrite the change on exit.",

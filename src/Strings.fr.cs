@@ -56,6 +56,7 @@ namespace IsaacSaveManager
 
             ["err.notSave"] = "Le fichier n'est pas une sauvegarde de progression d'Isaac (persistentgamedata).",
             ["err.oldVersion"] = "Cette sauvegarde vient d'une version antérieure à Repentance (Rebirth, Afterbirth ou Afterbirth+). Elle ne peut être ni utilisée ni convertie.",
+            ["err.newerVersion"] = "Cette sauvegarde vient d'une version du jeu plus récente que celle prise en charge par cette application. Mettez à jour Isaac Save Manager pour l'utiliser.",
             ["err.checksum"] = "La somme de contrôle ne correspond pas : le fichier est endommagé ou a été modifié à la main. Le jeu le rejetterait.",
             ["err.structure"] = "La structure du fichier n'est pas celle attendue (autre version du jeu ?).",
             ["err.gameRunning"] = "Le jeu est ouvert. Fermez-le avant de changer de sauvegarde : il écraserait la modification en quittant.",

@@ -56,6 +56,7 @@ namespace IsaacSaveManager
 
             ["err.notSave"] = "El archivo no es un guardado de progreso de Isaac (persistentgamedata).",
             ["err.oldVersion"] = "Es un guardado de una versión anterior a Repentance (Rebirth, Afterbirth o Afterbirth+). No se puede usar ni convertir.",
+            ["err.newerVersion"] = "Es un guardado de una versión del juego más nueva que esta app. Actualiza Isaac Save Manager para usarlo.",
             ["err.checksum"] = "El checksum no coincide: el archivo está dañado o se editó a mano. El juego lo descartaría.",
             ["err.structure"] = "La estructura del archivo no es la esperada (¿otra versión del juego?).",
             ["err.gameRunning"] = "El juego está abierto. Ciérralo antes de cambiar guardados: al salir sobrescribiría el cambio.",
